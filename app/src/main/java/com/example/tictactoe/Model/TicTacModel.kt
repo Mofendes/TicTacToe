@@ -27,4 +27,9 @@ data class TicTacModel(var jugadorWins: Int, var botWins: Int, var roundCount: I
             println("")
         }
     }
+
+    fun resetPunts(){
+        this.jugadorWins = 0
+        this.botWins = 0
+    }
 } // (val field: arrayOf<Array<Int>>(), val jugadorWins: Int, val botWins: Int)

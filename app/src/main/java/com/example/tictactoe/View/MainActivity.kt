@@ -3,6 +3,7 @@ package com.example.tictactoe.View
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
@@ -41,15 +42,20 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     // CLG ---
     private lateinit var campo: Array<Array<Int>>
-
+    private lateinit var viewModel: TicTacViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        viewModel = ViewModelProvider(this).get(TicTacViewModel::class.java)
         // CLG - 2021-11-13 - Añado ViewModel
-        var viewModel = ViewModelProvider(this).get(TicTacViewModel::class.java)
+        //var viewModel = ViewModelProvider(this).get(TicTacViewModel::class.java)
 
-        // CLG - 2021-11-13 - Añado viewBinding
+
+        player1Points = viewModel.model.jugadorWins
+        player2Points = viewModel.model.botWins
+
+                // CLG - 2021-11-13 - Añado viewBinding
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -70,17 +76,21 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 buttons[i][j] = findViewById(resID)
                 buttons[i][j]?.text = "" // CLG - 2021-11-13 - Añado inicialización de los textos para la primera vez que arranca la app.
                 buttons[i][j]?.setOnClickListener(this)
+
+
             }
         }
+        // La función mapea el texto de los botones en función del array 2D Int del ViewModel
+        mapeaBotones(viewModel.model.field)
 
         val buttonReset = findViewById<Button>(R.id.button_reset)
-        buttonReset.setOnClickListener { resetGame() }
+        buttonReset.setOnClickListener { resetGame(viewModel) }
 
-        /**
+
         val j = GFG.findBestMove(fieldToBoard()).col
         val i = GFG.findBestMove(fieldToBoard()).row
         buttons[i][j]?.setText("X")
-    **/
+
         }
 
 
@@ -291,21 +301,24 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             var row = 0
             var col = 0
         }
+
     } // Fin del companion object
 
 
     private fun jugadaP1(v: View) {
         (v as Button).text.toString()
-            v.setText("O")
-            roundCount++
+        v.setText("O")
+        //roundCount++
+        viewModel.model.roundCount++
 
     }
 
     private fun jugadaBot() {
-            val j = GFG.findBestMove(fieldToBoard()).col
-            val i = GFG.findBestMove(fieldToBoard()).row
-            buttons[i][j]?.setText("X")
-            roundCount++
+        val j = GFG.findBestMove(fieldToBoard()).col
+        val i = GFG.findBestMove(fieldToBoard()).row
+        buttons[i][j]?.setText("X")
+        //roundCount++
+        viewModel.model.roundCount++
     }
 
     private fun checkForWin(): Boolean {
@@ -327,8 +340,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         return field[0][2] == field[1][1] && field[0][2] == field[2][0] && field[0][2] != ""
     }
 
-    private fun player1Wins() {
-        player1Points++
+     private fun player1Wins() {
+        //player1Points++
+        viewModel.model.jugadorWins++
         updatePointsText()
         playing = false
         Toast.makeText(this, "PLAYER 1 WINS!", Toast.LENGTH_SHORT).show()
@@ -347,9 +361,11 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     @SuppressLint("SetTextI18n")
-    private fun updatePointsText() {
-        textViewPlayer1!!.text = "Player 1: $player1Points"
-        textViewPlayer2!!.text = "BOT: $player2Points"
+    private fun updatePointsText(viewModel: TicTacViewModel) {
+        //textViewPlayer1!!.text = "Player 1: $player1Points"
+        textViewPlayer1!!.text = "Player 1: $viewModel.model.jugadorWins"
+        //textViewPlayer2!!.text = "BOT: $player2Points"
+        textViewPlayer2!!.text = "BOT: $viewModel.model.botWins"
     }
 
     private fun resetBoard() {
@@ -364,15 +380,16 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun resetGame() {
-        player1Points = 0
-        player2Points = 0
+        //player1Points = 0
+        //player2Points = 0
+        viewModel.model.resetPunts()
         updatePointsText()
         resetBoard()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putInt("roundCount", roundCount)
+        outState.putInt("roundCount", viewModel.model.roundCount)
         outState.putInt("player1Points", player1Points)
         outState.putInt("player2Points", player2Points)
         outState.putBoolean("player1Turn", player1Turn)
@@ -391,8 +408,14 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     //COMPATIBILIDAD DEL JUEGO AL MIXIMAX
 
-    fun fieldToBoard(): Array<CharArray> {
+    fun fieldToBoard(): Array<Array<Int>> {
         // inicializa un array 2D de caracterss
+        val board  = arrayOf(
+            arrayOf(0, 0, 0),
+            arrayOf(0, 0, 0),
+            arrayOf(0, 0, 0)
+        )
+        /**
         val board = arrayOf(
             charArrayOf('_','_', '_'
             ),
@@ -401,7 +424,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             charArrayOf('_','_', '_'
             )
         )
-
+        */
         // Obtiene el actual "board" de los textos de los botones
         val field = retField()
 
@@ -409,9 +432,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         for (i in 0 until field.size) {
             for (j in 0 until field.get(0).size) {
                 if (field[i][j] == "X"){
-                    board[i][j] = 'X'
+                    board[i][j] = 1
                 }else if (field[i][j] == "O"){
-                    board[i][j] = 'O'
+                    board[i][j] = 2
                 }
             }
         }
@@ -436,7 +459,22 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         return field
     }
 
+    fun mapeaBotones(mapa: Array<Array<Int>>){
+        for (i in 0..2) {
+            for (j in 0..2) {
+                //mapa[i][j] = buttons[i][j]!!.text.toString()
 
+                    if (mapa[i][j] == 1){
+                        buttons[i][j]!!.text = "X";
+                    }else if(mapa[i][j] == 2){
+                        buttons[i][j]!!.text = "O"
+                    }else{
+                        buttons[i][j]!!.text = ""
+                    }
+
+            }
+        }
+    }
 
 
 }
